@@ -1,99 +1,121 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Schema;
 
-
-namespace lab1
+namespace Lesson1
 {
     internal class Program
     {
-        static void Main()
+        static void Main(string[] args)
         {
-            Console.WriteLine("Введите выражение:");
+            Console.Write("Введите выражение: ");
             string str = Console.ReadLine();
             str = str.Replace(" ", string.Empty);
-            GetAnsewer(OperationsAndNumbers(str));
-            
+            var prn = Rpn(str);
+            Console.Write("ОПЗ: ");
+            Console.WriteLine(string.Join(" ", prn));
+            Console.Write("Значение: ");
+            Console.WriteLine(string.Join(" ", Result(prn)));
         }
 
-        public static ArrayList OperationsAndNumbers(string str)
+        public static List<object> Rpn(string str)
         {
-            List<char> operations = new List<char>();
-            List<double> numbers = new List<double>();            
-            char[] testOperation = { '-', '*', '/', '+' };
-            string[] arrayNumber = str.Split(testOperation, StringSplitOptions.RemoveEmptyEntries);
-            foreach (string num in arrayNumber)
+            Dictionary<char, int> priority = new Dictionary<char, int>
             {
-                numbers.Add(double.Parse(num));
-            }
-
+                {'+', 1},
+                {'-', 1},
+                {'*', 2},
+                {'/', 2},
+                {'(', 0},
+                {')', 3},
+            };
+            List<object> rpn = new List<object>();
+            Stack<char> stack = new Stack<char>();
+            string number = string.Empty;
             for (int i = 0; i < str.Length; i++)
             {
-                if (testOperation.Contains(str[i]))
+                if (priority.ContainsKey(str[i]))
                 {
-                    operations.Add(str[i]);
+                    if (number != string.Empty)
+                    {
+                        rpn.Add(number);
+                        number = string.Empty;
+                    }
+
+                    if (str[i] == ')')
+                    {
+                        while (stack.Count > 0 && stack.Peek() != '(')
+                        {
+                            rpn.Add(stack.Pop());
+                        }
+                        if (stack.Count > 0 && stack.Peek() == '(')
+                        {
+                            stack.Pop();
+                        }
+                    }
+                    else if (stack.Count == 0 || str[i] == '(' || priority[str[i]] > priority[stack.Peek()])
+                    {
+                        stack.Push(str[i]);
+                    }
+                    else if (priority[str[i]] <= priority[stack.Peek()])
+                    {
+                        while (stack.Count > 0 && stack.Peek() != '(')
+                        {
+                            rpn.Add(stack.Pop());
+                        }
+                        if (stack.Count > 0 && stack.Peek() == '(')
+                        {
+                            stack.Pop();
+                        }
+                        stack.Push(str[i]);
+                    }
+                }
+                else
+                {
+                    number += str[i];
                 }
             }
-            Console.WriteLine($"список чисел: {string.Join(" ", numbers)}");
-            Console.WriteLine($"список операций: {string.Join(" ", operations)}");
-            ArrayList lists = new ArrayList() { operations, numbers };
-            return lists;
-        }
-        public static void GetAnsewer(ArrayList lists)
-        {
-            List<char> operations = (List<char>)lists[0];
-            List<double> numbers = (List<double>)lists[1];
-            
-            while (numbers.Count != 1)
+            rpn.Add(number);
+            while (stack.Count > 0)
             {
-                for (int i =0; i < operations.Count; i++)
-                {
-                    double number;
-                    if (operations[i] == '*' || operations[i] == '/')
-                    {
-                        if (operations[i] == '*')
-                        {
-                            number = numbers[i] * numbers[i + 1];
-                        }
-
-                        else
-                        {
-                            number = numbers[i] / numbers[i + 1];
-                        }
-                        numbers.RemoveAt(i+1);
-                        numbers.RemoveAt(i);
-                        operations.RemoveAt(i);
-                        numbers.Insert(i, number);
-                    }
-                    else if (!(operations.Contains('*')|| operations.Contains('/')))
-                    {
-                        if (operations[i] == '+')
-                        {
-                            number = numbers[i] + numbers[i + 1];
-                        }
-                        else
-                        {
-                            number = numbers[i] - numbers[i + 1];
-                        }
-                        numbers.RemoveAt(i + 1);
-                        numbers.RemoveAt(i);
-                        numbers.Insert(i, number);
-                        operations.RemoveAt(i);
-                        
-                    }
-                }
-                
-               
+                rpn.Add(stack.Pop());
             }
-            Console.WriteLine($"ответ: {string.Join(" ", numbers)}");
-
+            return rpn;
         }
-        
+
+        public static Stack<double> Result(List<object> expression)
+        {
+            Stack<double> stack = new Stack<double>();
+            for (var i = 0; i < expression.Count; i++)
+            {
+                if (expression[i] is string)
+                {
+                    double num = Convert.ToDouble(expression[i]);
+                    stack.Push(num);
+                }
+                else
+                {
+                    var second = stack.Pop();
+                    var first = stack.Pop();
+                    stack.Push(Calculate((char)expression[i], first, second));
+                }
+            }
+            return stack;
+        }
+
+        public static double Calculate(char op, double first, double second)
+        {
+            switch (op)
+            {
+                case '*': return first * second;
+                case '/': return first / second;
+                case '+': return first + second;
+                case '-': return first - second;
+                default: return double.NaN;
+            }
+        }
     }
 }
